@@ -2,6 +2,8 @@ import tkinter as tk
 import random
 from tkinter import ttk
 
+history_listbox = None  # Define at top level
+
 def animate_dice_roll(times=10):
     if times > 0:
         dice_icon_label.config(text=random.choice(list(dice_faces.values())))
@@ -10,6 +12,12 @@ def animate_dice_roll(times=10):
         show_result()
 
 def roll_dice():
+    try:
+        int(user_guess.get())  # Validate guess
+    except ValueError:
+        dice_result_label.config(text="Please enter a valid guess!", fg="#E74C3C")
+        return
+
     roll_button.config(state=tk.DISABLED)
     dice_result_label.config(text="Rolling...", font=("Arial", 20, "bold"), fg=text_color)
     animate_dice_roll()
@@ -17,16 +25,31 @@ def roll_dice():
 def show_result():
     num_dice = int(selected_dice.get())
     dice_values = [random.randint(1, 6) for _ in range(num_dice)]
+    total_value = sum(dice_values)
     dice_text = " ".join(dice_faces.get(value, str(value)) for value in dice_values)
+
     dice_icon_label.config(text=dice_text, font=("Arial", 60, "bold"), fg=random.choice(colors))
-    dice_result_label.config(text=f"Dice Result: {', '.join(map(str, dice_values))}", font=("Arial", 20, "bold"), fg=text_color)
+    dice_result_label.config(text=f"Dice Result: {', '.join(map(str, dice_values))}\nTotal: {total_value}", font=("Arial", 20, "bold"), fg=text_color)
+
+    try:
+        guess = int(user_guess.get())
+        if guess == total_value:
+            result_message = "🎉 Correct Guess!"
+        else:
+            result_message = f"❌ Incorrect. You guessed {guess}."
+        dice_result_label.config(text=f"{dice_result_label.cget('text')}\n{result_message}")
+    except ValueError:
+        dice_result_label.config(text=f"{dice_result_label.cget('text')}\n(Invalid guess)")
+
     roll_button.config(state=tk.NORMAL)
     dice_history.append(", ".join(map(str, dice_values)))
-    if len(dice_history) > history_limit:
+    if len(dice_history) > 10:
         dice_history.pop(0)
     update_history_listbox()
 
 def update_history_listbox():
+    if history_listbox is None:
+        return
     history_listbox.delete(0, tk.END)
     for entry in dice_history:
         history_listbox.insert(tk.END, entry)
@@ -57,7 +80,7 @@ def toggle_theme():
         text_color = "#000000"
         theme_icon.config(text="🌞")
         style.configure("Custom.TButton", background="#3498DB", foreground="black")
-    
+
     root.configure(bg=bg_color)
     main_frame.config(bg=bg_color)
     theme_frame.config(bg=bg_color)
@@ -69,7 +92,7 @@ def toggle_theme():
 
 root = tk.Tk()
 root.title("🎲 AI Dice Roller")
-root.geometry("400x600")
+root.geometry("500x750")
 root.resizable(True, True)
 
 bg_color = "#2C3E50"
@@ -99,6 +122,14 @@ dice_result_label.pack(pady=5)
 selected_dice = tk.StringVar(value="1")
 dice_spinbox = ttk.Spinbox(main_frame, textvariable=selected_dice, from_=1, to=6, wrap=True, width=5, font=("Arial", 14))
 dice_spinbox.pack(pady=5)
+
+# NEW: Guess Input
+guess_label = tk.Label(main_frame, text="Your Guess (Total Value):", font=("Arial", 14), bg=bg_color, fg=text_color)
+guess_label.pack(pady=5)
+
+user_guess = tk.StringVar()
+guess_entry = ttk.Entry(main_frame, textvariable=user_guess, font=("Arial", 14))
+guess_entry.pack(pady=5)
 
 roll_button = ttk.Button(main_frame, text="Roll Dice", command=roll_dice, style="Custom.TButton")
 roll_button.pack(pady=10)
